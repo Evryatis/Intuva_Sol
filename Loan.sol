@@ -1,32 +1,56 @@
-
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.7.0 <0.9.0;
 
 interface Intuva_Deposit {
     function returnDeposits(address account) external view returns (uint);
+    function deposit(uint amount) external payable;
+    function withdraw(address account, uint amount) external payable;
+
 }
 
 contract Loan {
 
+    address public owner;
+
+
+    constructor() {
+        owner = msg.sender;
+    }
+
     mapping(address => uint256) public loans; // Tracks each user's loan amount
 
-    // Function to give a loan
-    function getLoan() external payable {
+    uint public totalBorrowing;
 
-        // Ensure msg.value (loan amount) is greater than 0
-        require(msg.value > 0, "Loan amount must be greater than 0");
+    address public Intuva_DepositAddress;
 
-        uint depositBalance = Intuva_Deposit(0x868742488c3190F783Fb358D43cd9BfE509b7E1A).returnDeposits(msg.sender);
-
-        // Ensure the requested loan amount does not exceed 75% of the user's deposit
-        require(
-            loans[msg.sender] + msg.value <= depositBalance * 75 / 100,
-            "Insufficient Ratio! Add more into your balance, or borrow less."
-        );
-
-        // Update the loan balance
-        loans[msg.sender] += msg.value;
-
-        // Transfer the funds from the contract to the receiver (msg.sender)
-        payable(msg.sender).transfer(msg.value);
+    function setDepositContractAddress(address _loanContract) external {
+        require(Intuva_DepositAddress == address(0), "Loan contract already set!");
+        require(msg.sender == owner, "Not authorized");
+        Intuva_DepositAddress = _loanContract;
     }
+
+    function returnTotalBorrowing() view external returns (uint){
+        return totalBorrowing;
+    }
+
+    // Function to give a loan
+    function getLoan(uint amount) external payable {
+        // Ensure msg.value (loan amount) is greater than 0
+        require(amount > 0, "Loan amount must be greater than 0");
+
+        totalBorrowing += amount;
+        Intuva_Deposit(Intuva_DepositAddress).withdraw(msg.sender, amount);
+        // Update the loan balance
+        loans[msg.sender] += amount;
+    }
+
+    function returnLoanBal(address user) view external returns (uint loan){
+        return loans[user] / 1 ether;
+    }
+
+    function repayLoan(uint amount) external payable {
+        Intuva_Deposit(Intuva_DepositAddress).deposit(amount);
+        loans[msg.sender] -= amount;
+    }
+
+}
