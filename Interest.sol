@@ -23,6 +23,7 @@ contract Global_InterestIndex {
     mapping(address => uint256) public userInterestIndex;
 
     address Intuva_DepositAddress;
+    address Intuva_LoanAddress;
     
     uint256 lastUpdate;
 
@@ -35,11 +36,16 @@ contract Global_InterestIndex {
     function setLoanContractAddress(address _loanContract) external {
         require(Intuva_DepositAddress == address(0), "Loan contract already set!");
         require(msg.sender == owner, "Not authorized");
-        Intuva_DepositAddress = _loanContract;
+        Intuva_LoanAddress = _loanContract;
     }
 
-
+    function averageInterest() view external returns (uint) {
+        uint interestKick = ((Intuva_LoanSystem(Intuva_LoanAddress).returnTotalBorrowing() / Intuva_Deposit(Intuva_DepositAddress).returnTotalDeposits()) * 100);
+        return interestKick;
     }
+}
+
+
+
 
     
-}
